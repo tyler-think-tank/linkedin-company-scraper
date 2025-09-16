@@ -602,12 +602,13 @@ const router = express.Router();
 
 // Root API endpoint
 router.get("/", (req, res) => {
+  const baseUrl = BASE_API_URL || '';
   res.json({
     message: "LinkedIn Company Scraper API",
     version: "1.0.0",
     endpoints: {
-      scrape: `${BASE_API_URL}/scrape?company=COMPANY_NAME`,
-      health: `${BASE_API_URL}/health`
+      scrape: `${baseUrl}/scrape?company=COMPANY_NAME`,
+      health: `${baseUrl}/health`
     }
   });
 });
@@ -644,10 +645,14 @@ router.get(
 );
 
 // Mount router on base path
-// For cPanel: if BASE_API_URL is empty/undefined, assume /api based on the request path
-const mountPath = BASE_API_URL || '/api';
-logger.error(`DEBUG: Mounting router on path: "${mountPath}"`);
-app.use(mountPath, router);
+// If BASE_API_URL is empty, mount at root for custom subdomain (api.intranet.thinktank.org.uk)
+if (BASE_API_URL) {
+  logger.error(`DEBUG: Mounting router on path: "${BASE_API_URL}"`);
+  app.use(BASE_API_URL, router);
+} else {
+  logger.error(`DEBUG: Mounting router on root path "/"`);
+  app.use('/', router);
+}
 
 // Error handling for invalid routes
 app.use((_, res) => {
