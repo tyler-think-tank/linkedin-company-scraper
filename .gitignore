@@ -1,0 +1,12 @@
+# Ignore node modules
+node_modules/
+
+# Ignore files and folders starting with a dot
+.*
+# but keep repository metadata and this file
+!.gitignore
+!.gitattributes
+!.git/
+
+# Ignore log files
+*.log
