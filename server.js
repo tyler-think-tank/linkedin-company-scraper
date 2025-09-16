@@ -689,6 +689,3 @@ app.use((_, res) => {
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
 });
-app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
-});
