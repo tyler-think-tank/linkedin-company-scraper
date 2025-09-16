@@ -232,7 +232,7 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
     const { default: retry } = await import("p-retry");
 
     // Launch browser with Render-optimized configuration
-    browser = await puppeteer.launch({
+    const puppeteerOptions = {
       headless: "new",
       args: [
         "--no-sandbox",
@@ -254,7 +254,15 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
         "--disable-renderer-backgrounding",
         ...(NODE_ENV === 'production' ? ['--single-process'] : []),
       ],
-    });
+    };
+
+    // On Render, use the installed Chrome from cache
+    if (NODE_ENV === 'production') {
+      // Let Puppeteer find Chrome in its cache directory
+      delete puppeteerOptions.executablePath;
+    }
+
+    browser = await puppeteer.launch(puppeteerOptions);
 
     // Get cookies once outside the retry loop
     let cookies;
