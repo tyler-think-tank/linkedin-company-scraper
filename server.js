@@ -239,7 +239,25 @@ async function refreshCookies() {
 async function scrapeCompanyPosts(companyName, maxPosts = 5) {
   let browser;
   try {
-    const retry = require("p-retry");
+    // Simple retry function to replace p-retry
+    async function retryOperation(operation, maxRetries = 2, minTimeout = 2000, maxTimeout = MAX_RETRY_DELAY) {
+      let lastError;
+      for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+        try {
+          return await operation(attempt);
+        } catch (error) {
+          lastError = error;
+          if (attempt <= maxRetries) {
+            const waitTime = Math.min(Math.pow(2, attempt) * minTimeout, maxTimeout);
+            const errorDetails = error.message || (error instanceof Error ? error.stack : JSON.stringify(error, Object.getOwnPropertyNames(error))) || 'Unknown error';
+            logger.warn(`Retry attempt ${attempt} failed for ${companyName}: ${errorDetails}`);
+            logger.warn(`Waiting ${waitTime}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+        }
+      }
+      throw lastError;
+    }
 
     // Puppeteer launch with increased timeouts for Render
     browser = await puppeteer.launch({
@@ -274,7 +292,7 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
       cookies = { li_at: LI_AT, jsessionid: JSESSIONID };
     }
 
-    const posts = await retry(
+    const posts = await retryOperation(
       async (attempt) => {
         const page = await browser.newPage();
 
@@ -595,22 +613,6 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
           `Scraped ${posts.length} posts for company: ${companyName}`
         );
         return posts;
-      },
-      {
-        retries: 2, // Reduced retries for faster failure
-        minTimeout: 2000, // Faster retry timing
-        maxTimeout: MAX_RETRY_DELAY,
-        onFailedAttempt: (error) => {
-          const errorDetails =
-            error.message ||
-            (error instanceof Error
-              ? error.stack
-              : JSON.stringify(error, Object.getOwnPropertyNames(error))) ||
-            "Unknown error";
-          logger.warn(
-            `Retry attempt failed for ${companyName}: ${errorDetails}`
-          );
-        },
       }
     );
 
