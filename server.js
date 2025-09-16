@@ -57,6 +57,7 @@ app.use((req, res, next) => {
   logger.error(`DEBUG Headers: ${JSON.stringify(req.headers)}`);
   next();
 });
+
 // Rate limiting with proxy support
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -235,30 +236,30 @@ async function refreshCookies() {
   }
 }
 
+// Simple retry function to replace p-retry
+async function retryOperation(operation, companyName, maxRetries = 2, minTimeout = 2000) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    try {
+      return await operation(attempt);
+    } catch (error) {
+      lastError = error;
+      if (attempt <= maxRetries) {
+        const waitTime = Math.min(Math.pow(2, attempt) * minTimeout, MAX_RETRY_DELAY);
+        const errorDetails = error.message || error.toString();
+        logger.warn(`Retry attempt ${attempt} failed for ${companyName}: ${errorDetails}`);
+        logger.warn(`Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+  throw lastError;
+}
+
 // Scrape function
 async function scrapeCompanyPosts(companyName, maxPosts = 5) {
   let browser;
   try {
-    // Simple retry function to replace p-retry
-    async function retryOperation(operation, maxRetries = 2, minTimeout = 2000, maxTimeout = MAX_RETRY_DELAY) {
-      let lastError;
-      for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
-        try {
-          return await operation(attempt);
-        } catch (error) {
-          lastError = error;
-          if (attempt <= maxRetries) {
-            const waitTime = Math.min(Math.pow(2, attempt) * minTimeout, maxTimeout);
-            const errorDetails = error.message || (error instanceof Error ? error.stack : JSON.stringify(error, Object.getOwnPropertyNames(error))) || 'Unknown error';
-            logger.warn(`Retry attempt ${attempt} failed for ${companyName}: ${errorDetails}`);
-            logger.warn(`Waiting ${waitTime}ms before retry...`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-          }
-        }
-      }
-      throw lastError;
-    }
-
     // Puppeteer launch with increased timeouts for Render
     browser = await puppeteer.launch({
       headless: true,
@@ -613,7 +614,8 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
           `Scraped ${posts.length} posts for company: ${companyName}`
         );
         return posts;
-      }
+      },
+      companyName
     );
 
     return posts;
@@ -633,7 +635,7 @@ router.get("/", (req, res) => {
   const baseUrl = BASE_API_URL || "";
   res.json({
     message: "LinkedIn Company Scraper API",
-    version: "1.0.0",
+    version: "1.0.2",
     endpoints: {
       scrape: `${baseUrl}/scrape?company=COMPANY_NAME`,
       health: `${baseUrl}/health`,
