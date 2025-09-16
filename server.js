@@ -1,15 +1,24 @@
 const express = require("express");
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const rateLimit = require("express-rate-limit");
 const winston = require("winston");
 const dotenv = require("dotenv");
 const { query, validationResult } = require("express-validator");
 const cors = require("cors");
 
-puppeteer.use(StealthPlugin());
-
 dotenv.config();
+
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Use puppeteer-core for Render deployment (system Chrome)
+const puppeteer = NODE_ENV === 'production'
+  ? require("puppeteer-core")
+  : require("puppeteer-extra");
+
+// Only use stealth plugin in development
+if (NODE_ENV !== 'production') {
+  const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+  puppeteer.use(StealthPlugin());
+}
 
 const app = express();
 
@@ -19,7 +28,6 @@ app.set('trust proxy', 1);
 
 const PORT = process.env.PORT || 3000;
 const BASE_API_URL = process.env.BASE_API_URL || '';
-const NODE_ENV = process.env.NODE_ENV || 'development';
 const LI_AT = process.env.LI_AT;
 const JSESSIONID = process.env.JSESSIONID;
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL;
@@ -256,10 +264,35 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
       ],
     };
 
-    // On Render, use the installed Chrome from cache
+    // On Render, try to use system Chrome paths
     if (NODE_ENV === 'production') {
-      // Let Puppeteer find Chrome in its cache directory
-      delete puppeteerOptions.executablePath;
+      // Common Chrome paths on Linux systems like Render
+      const chromePaths = [
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/snap/chromium/current/usr/lib/chromium-browser/chrome',
+      ];
+
+      let foundChrome = false;
+      for (const path of chromePaths) {
+        try {
+          const fs = require('fs');
+          if (fs.existsSync(path)) {
+            puppeteerOptions.executablePath = path;
+            logger.error(`DEBUG: Found Chrome at ${path}`);
+            foundChrome = true;
+            break;
+          }
+        } catch (err) {
+          continue;
+        }
+      }
+
+      if (!foundChrome) {
+        logger.error('DEBUG: No system Chrome found, trying default Puppeteer');
+      }
     }
 
     browser = await puppeteer.launch(puppeteerOptions);
