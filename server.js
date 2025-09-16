@@ -9,16 +9,11 @@ dotenv.config();
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Use puppeteer-core for Render deployment (system Chrome)
-const puppeteer = NODE_ENV === 'production'
-  ? require("puppeteer-core")
-  : require("puppeteer-extra");
+// Simple Puppeteer setup - Render handles Chrome automatically
+const puppeteer = require("puppeteer-extra");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 
-// Only use stealth plugin in development
-if (NODE_ENV !== 'production') {
-  const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-  puppeteer.use(StealthPlugin());
-}
+puppeteer.use(StealthPlugin());
 
 const app = express();
 
@@ -239,8 +234,8 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
   try {
     const { default: retry } = await import("p-retry");
 
-    // Launch browser with Render-optimized configuration
-    const puppeteerOptions = {
+    // Simple Puppeteer launch - Render handles Chrome automatically
+    browser = await puppeteer.launch({
       headless: "new",
       args: [
         "--no-sandbox",
@@ -256,46 +251,11 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
         "--disable-plugins",
         "--no-first-run",
         "--no-default-browser-check",
-        // Render-specific optimizations
         "--disable-background-timer-throttling",
         "--disable-backgrounding-occluded-windows",
         "--disable-renderer-backgrounding",
-        ...(NODE_ENV === 'production' ? ['--single-process'] : []),
       ],
-    };
-
-    // On Render, try to use system Chrome paths
-    if (NODE_ENV === 'production') {
-      // Common Chrome paths on Linux systems like Render
-      const chromePaths = [
-        '/usr/bin/google-chrome',
-        '/usr/bin/google-chrome-stable',
-        '/usr/bin/chromium',
-        '/usr/bin/chromium-browser',
-        '/snap/chromium/current/usr/lib/chromium-browser/chrome',
-      ];
-
-      let foundChrome = false;
-      for (const path of chromePaths) {
-        try {
-          const fs = require('fs');
-          if (fs.existsSync(path)) {
-            puppeteerOptions.executablePath = path;
-            logger.error(`DEBUG: Found Chrome at ${path}`);
-            foundChrome = true;
-            break;
-          }
-        } catch (err) {
-          continue;
-        }
-      }
-
-      if (!foundChrome) {
-        logger.error('DEBUG: No system Chrome found, trying default Puppeteer');
-      }
-    }
-
-    browser = await puppeteer.launch(puppeteerOptions);
+    });
 
     // Get cookies once outside the retry loop
     let cookies;
