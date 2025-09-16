@@ -7,7 +7,7 @@ const cors = require("cors");
 
 dotenv.config();
 
-const NODE_ENV = process.env.NODE_ENV || 'development';
+const NODE_ENV = process.env.NODE_ENV || "development";
 
 // Puppeteer setup optimized for Render deployment
 const puppeteer = require("puppeteer");
@@ -16,16 +16,16 @@ const app = express();
 
 // Configure Express to trust proxy (more secure for cPanel hosting)
 // Trust only the first proxy (cPanel's reverse proxy)
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
 const PORT = process.env.PORT || 3000;
-const BASE_API_URL = process.env.BASE_API_URL || '';
+const BASE_API_URL = process.env.BASE_API_URL || "";
 const LI_AT = process.env.LI_AT;
 const JSESSIONID = process.env.JSESSIONID;
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL;
 const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD;
-const MIN_DELAY = parseInt(process.env.MIN_DELAY) || 2000;  // Reduced from 15s to 2s
-const MAX_DELAY = parseInt(process.env.MAX_DELAY) || 5000;   // Reduced from 60s to 5s
+const MIN_DELAY = parseInt(process.env.MIN_DELAY) || 2000; // Reduced from 15s to 2s
+const MAX_DELAY = parseInt(process.env.MAX_DELAY) || 5000; // Reduced from 60s to 5s
 const MAX_RETRY_DELAY = parseInt(process.env.MAX_RETRY_DELAY) || 30000; // Reduced from 10min to 30s
 
 // Logger setup
@@ -48,7 +48,9 @@ app.use(express.json());
 
 // Debug middleware to log all requests to error.log
 app.use((req, res, next) => {
-  logger.error(`DEBUG REQUEST: ${new Date().toISOString()} - ${req.method} ${req.url}`);
+  logger.error(
+    `DEBUG REQUEST: ${new Date().toISOString()} - ${req.method} ${req.url}`
+  );
   logger.error(`DEBUG BASE_API_URL: "${BASE_API_URL}"`);
   logger.error(`DEBUG Original URL: ${req.originalUrl}`);
   logger.error(`DEBUG Request Path: ${req.path}`);
@@ -69,7 +71,7 @@ const limiter = rateLimit({
   },
   skip: (req) => {
     // Optional: Skip rate limiting for health checks
-    return req.path === '/health';
+    return req.path === "/health";
   },
 });
 
@@ -91,7 +93,7 @@ const COOKIE_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 async function refreshCookies() {
   // Check if we have cached cookies that are still valid
   const now = Date.now();
-  if (cookieCache && (now - cookieCacheTime) < COOKIE_CACHE_DURATION) {
+  if (cookieCache && now - cookieCacheTime < COOKIE_CACHE_DURATION) {
     logger.info("Using cached cookies");
     return cookieCache;
   }
@@ -153,7 +155,10 @@ async function refreshCookies() {
 
     // Wait for navigation or check if we're already logged in
     try {
-      await page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.waitForNavigation({
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
     } catch (navigationError) {
       const currentUrl = page.url();
       const htmlSnippet = await page.evaluate(() =>
@@ -164,8 +169,13 @@ async function refreshCookies() {
       );
 
       // Check if we're already on a LinkedIn authenticated page (feed, etc.)
-      if (currentUrl.includes("linkedin.com/feed") || currentUrl.includes("linkedin.com/in/")) {
-        logger.info("Login successful - already on authenticated LinkedIn page");
+      if (
+        currentUrl.includes("linkedin.com/feed") ||
+        currentUrl.includes("linkedin.com/in/")
+      ) {
+        logger.info(
+          "Login successful - already on authenticated LinkedIn page"
+        );
         // Continue with cookie extraction
       } else if (
         currentUrl.includes("checkpoint") ||
@@ -229,7 +239,7 @@ async function refreshCookies() {
 async function scrapeCompanyPosts(companyName, maxPosts = 5) {
   let browser;
   try {
-    const { default: retry } = await import("p-retry");
+    const retry = require("p-retry");
 
     // Puppeteer launch with increased timeouts for Render
     browser = await puppeteer.launch({
@@ -313,12 +323,13 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
 
         // Wait specifically for posts to load instead of full network idle
-        await page.waitForSelector(
-          ".feed-shared-update-v2, .occludable-update",
-          { timeout: 15000 }
-        ).catch(() => {
-          // If posts don't load quickly, continue anyway - the error handling below will catch it
-        });
+        await page
+          .waitForSelector(".feed-shared-update-v2, .occludable-update", {
+            timeout: 15000,
+          })
+          .catch(() => {
+            // If posts don't load quickly, continue anyway - the error handling below will catch it
+          });
 
         await page.mouse.move(Math.random() * 800, Math.random() * 600);
 
@@ -366,17 +377,21 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
         }
 
         // Check if posts are already loaded, otherwise wait briefly
-        const postsExist = await page.$(".feed-shared-update-v2, .occludable-update");
+        const postsExist = await page.$(
+          ".feed-shared-update-v2, .occludable-update"
+        );
         if (!postsExist) {
           await page
-            .waitForSelector(
-              ".feed-shared-update-v2, .occludable-update",
-              { timeout: 10000 }
-            )
+            .waitForSelector(".feed-shared-update-v2, .occludable-update", {
+              timeout: 10000,
+            })
             .catch(async () => {
               const html = await page.evaluate(() => document.body.innerHTML);
               logger.error(
-                `No posts found for ${companyName}: ${html.substring(0, 500)}...`
+                `No posts found for ${companyName}: ${html.substring(
+                  0,
+                  500
+                )}...`
               );
               throw new Error("No posts found or company page does not exist");
             });
@@ -389,7 +404,9 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
 
         do {
           const newPostCount = await page.evaluate(() => {
-            return document.querySelectorAll(".feed-shared-update-v2, .occludable-update").length;
+            return document.querySelectorAll(
+              ".feed-shared-update-v2, .occludable-update"
+            ).length;
           });
 
           if (newPostCount >= maxPosts) {
@@ -426,7 +443,8 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
             const post = postElements[i];
 
             // Check for duplicate posts using URN
-            const urn = post.getAttribute("data-urn") || post.getAttribute("data-id");
+            const urn =
+              post.getAttribute("data-urn") || post.getAttribute("data-id");
             if (urn && processedUrns.has(urn)) {
               console.log(`Skipping duplicate post with URN: ${urn}`);
               i++;
@@ -445,29 +463,35 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
                 .querySelector(
                   ".feed-shared-update-v2__description-wrapper, .feed-shared-text, .feed-shared-inline-show-more-text"
                 )
-                ?.innerText?.trim() || null;
+                ?.innerText?.trim() ||
+              null;
 
             // Enhanced author extraction
             const author =
               post
-                .querySelector(
-                  ".feed-shared-actor__name .visually-hidden"
-                )
+                .querySelector(".feed-shared-actor__name .visually-hidden")
                 ?.innerText?.trim() ||
               post
                 .querySelector(
                   ".feed-shared-actor__name, .update-components-actor__name"
                 )
-                ?.innerText?.trim() || null;
+                ?.innerText?.trim() ||
+              null;
 
             // Fixed date extraction - target actual time elements
             let date = null;
-            const timeElement = post.querySelector("time.feed-shared-actor__sub-description");
+            const timeElement = post.querySelector(
+              "time.feed-shared-actor__sub-description"
+            );
             if (timeElement) {
-              date = timeElement.getAttribute("datetime") || timeElement.innerText?.trim();
+              date =
+                timeElement.getAttribute("datetime") ||
+                timeElement.innerText?.trim();
             } else {
               // Fallback to other date selectors
-              const dateEl = post.querySelector(".feed-shared-actor__sub-description, .feed-shared-actor__description");
+              const dateEl = post.querySelector(
+                ".feed-shared-actor__sub-description, .feed-shared-actor__description"
+              );
               if (dateEl && !dateEl.innerText.includes("Feed post number")) {
                 date = dateEl.innerText?.trim();
               }
@@ -498,7 +522,7 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
               // Try to find permalink from share button or other elements
               const shareBtn = post.querySelector("[aria-label*='Share']");
               if (shareBtn) {
-                const parentLink = shareBtn.closest('a');
+                const parentLink = shareBtn.closest("a");
                 if (parentLink && parentLink.href) {
                   permalink = parentLink.href;
                 }
@@ -529,7 +553,12 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
             }
 
             // Only include posts that have meaningful content
-            const hasContent = text || author || imageUrl || videoUrl || (date && !date.includes("Feed post number"));
+            const hasContent =
+              text ||
+              author ||
+              imageUrl ||
+              videoUrl ||
+              (date && !date.includes("Feed post number"));
 
             if (hasContent) {
               results.push({
@@ -548,7 +577,7 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
                 author: !!author,
                 date: date,
                 imageUrl: !!imageUrl,
-                videoUrl: !!videoUrl
+                videoUrl: !!videoUrl,
               });
             }
             i++;
@@ -568,11 +597,16 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
         return posts;
       },
       {
-        retries: 2,  // Reduced retries for faster failure
-        minTimeout: 2000,  // Faster retry timing
+        retries: 2, // Reduced retries for faster failure
+        minTimeout: 2000, // Faster retry timing
         maxTimeout: MAX_RETRY_DELAY,
         onFailedAttempt: (error) => {
-          const errorDetails = error.message || (error instanceof Error ? error.stack : JSON.stringify(error, Object.getOwnPropertyNames(error))) || 'Unknown error';
+          const errorDetails =
+            error.message ||
+            (error instanceof Error
+              ? error.stack
+              : JSON.stringify(error, Object.getOwnPropertyNames(error))) ||
+            "Unknown error";
           logger.warn(
             `Retry attempt failed for ${companyName}: ${errorDetails}`
           );
@@ -594,14 +628,14 @@ const router = express.Router();
 
 // Root API endpoint
 router.get("/", (req, res) => {
-  const baseUrl = BASE_API_URL || '';
+  const baseUrl = BASE_API_URL || "";
   res.json({
     message: "LinkedIn Company Scraper API",
     version: "1.0.0",
     endpoints: {
       scrape: `${baseUrl}/scrape?company=COMPANY_NAME`,
-      health: `${baseUrl}/health`
-    }
+      health: `${baseUrl}/health`,
+    },
   });
 });
 
@@ -643,7 +677,7 @@ if (BASE_API_URL) {
   app.use(BASE_API_URL, router);
 } else {
   logger.error(`DEBUG: Mounting router on root path "/"`);
-  app.use('/', router);
+  app.use("/", router);
 }
 
 // Error handling for invalid routes
@@ -652,6 +686,9 @@ app.use((_, res) => {
 });
 
 // Start server
+app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`);
+});
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
 });
