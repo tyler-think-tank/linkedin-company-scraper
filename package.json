@@ -17,8 +17,6 @@
     "express-validator": "^7.2.1",
     "p-retry": "^7.0.0",
     "puppeteer": "^24.20.0",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "winston": "^3.17.0"
   }
 }

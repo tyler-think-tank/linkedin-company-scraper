@@ -9,11 +9,8 @@ dotenv.config();
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Simple Puppeteer setup - Render handles Chrome automatically
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-
-puppeteer.use(StealthPlugin());
+// Puppeteer setup optimized for Render deployment
+const puppeteer = require("puppeteer");
 
 const app = express();
 
@@ -234,11 +231,12 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
   try {
     const { default: retry } = await import("p-retry");
 
-    // Simple Puppeteer launch - Render handles Chrome automatically
+    // Puppeteer launch optimized for Render 2024
     browser = await puppeteer.launch({
-      headless: "new",
+      headless: true, // Use boolean true for production
       args: [
         "--no-sandbox",
+        "--use-gl=egl",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-accelerated-2d-canvas",
@@ -251,9 +249,6 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
         "--disable-plugins",
         "--no-first-run",
         "--no-default-browser-check",
-        "--disable-background-timer-throttling",
-        "--disable-backgrounding-occluded-windows",
-        "--disable-renderer-backgrounding",
       ],
     });
 
