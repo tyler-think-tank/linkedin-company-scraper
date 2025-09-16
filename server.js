@@ -231,9 +231,10 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
   try {
     const { default: retry } = await import("p-retry");
 
-    // Simple Puppeteer launch - let it handle Chrome automatically
+    // Puppeteer launch with increased timeouts for Render
     browser = await puppeteer.launch({
       headless: true,
+      protocolTimeout: 120000, // 2 minutes instead of default 30s
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -243,6 +244,7 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
         "--disable-features=WebRtc,MediaStream",
         "--no-first-run",
         "--no-default-browser-check",
+        "--single-process", // Use single process for Render's limited resources
       ],
     });
 
