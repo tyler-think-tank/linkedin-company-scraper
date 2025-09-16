@@ -231,28 +231,8 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
   try {
     const { default: retry } = await import("p-retry");
 
-    // Debug: Log the Puppeteer cache directory being used
-    logger.error(`DEBUG: PUPPETEER_CACHE_DIR = ${process.env.PUPPETEER_CACHE_DIR || 'not set'}`);
-
-    // Try to find Chrome executable in common paths
-    const fs = require('fs');
-    const possibleChromePaths = [
-      '/opt/render/project/src/.cache/puppeteer/chrome/linux-140.0.7339.82/chrome-linux64/chrome',
-      '/opt/render/.cache/puppeteer/chrome/linux-140.0.7339.82/chrome-linux64/chrome',
-      '/usr/bin/google-chrome',
-      '/usr/bin/chromium-browser',
-    ];
-
-    let executablePath = null;
-    for (const path of possibleChromePaths) {
-      if (fs.existsSync(path)) {
-        executablePath = path;
-        logger.error(`DEBUG: Found Chrome at ${path}`);
-        break;
-      }
-    }
-
-    const launchOptions = {
+    // Simple Puppeteer launch - let it handle Chrome automatically
+    browser = await puppeteer.launch({
       headless: true,
       args: [
         "--no-sandbox",
@@ -264,16 +244,7 @@ async function scrapeCompanyPosts(companyName, maxPosts = 5) {
         "--no-first-run",
         "--no-default-browser-check",
       ],
-    };
-
-    // Only set executablePath if we found Chrome
-    if (executablePath) {
-      launchOptions.executablePath = executablePath;
-    } else {
-      logger.error('DEBUG: No Chrome executable found, using default Puppeteer');
-    }
-
-    browser = await puppeteer.launch(launchOptions);
+    });
 
     // Get cookies once outside the retry loop
     let cookies;

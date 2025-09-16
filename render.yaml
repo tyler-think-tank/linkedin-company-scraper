@@ -2,13 +2,11 @@ services:
   - type: web
     name: linkedin-scraper
     runtime: node
-    buildCommand: ./render-build.sh
+    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: BASE_API_URL
         value: ""
-      - key: PUPPETEER_CACHE_DIR
-        value: /opt/render/project/src/.cache/puppeteer
     plan: free
