@@ -1,10 +1,10 @@
 {
-  "name": "li-company-posts-apify-proxy",
-  "version": "1.0.0",
+  "name": "li-company-posts-apify-mysql",
+  "version": "3.0.0",
   "private": true,
   "type": "commonjs",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "start": "node server.js"
@@ -16,6 +16,7 @@
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
     "express-validator": "^7.2.1",
+    "mysql2": "^3.11.0",
     "winston": "^3.13.0"
   }
 }
