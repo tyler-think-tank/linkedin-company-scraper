@@ -32,9 +32,9 @@ const BASE_API_URL = process.env.BASE_API_URL || "";
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
 const APIFY_ACTOR_ID =
   process.env.APIFY_ACTOR_ID || "apimaestro/linkedin-company-posts";
-// Daily gate: only one run per company per this many ms (default 24h)
+// Daily gate: only one run per company per this many ms (default 12h)
 const DAILY_WINDOW_MS = parseInt(
-  process.env.DAILY_WINDOW_MS || (24 * 60 * 60 * 1000).toString(),
+  process.env.DAILY_WINDOW_MS || (12 * 60 * 60 * 1000).toString(),
   10
 );
 
