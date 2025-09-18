@@ -326,9 +326,16 @@ async function getLatestItemFromRun(run) {
   return null;
 }
 
-// Save a single item (latest) to DB
+// Save a single item (latest) to DB only if it's actually new
 async function saveLatestToDb(companyKey, item) {
   if (!item) return null;
+
+  // Check if this post is already the latest in our DB
+  const existingLatest = await getLatestSavedFromDb(companyKey);
+  if (existingLatest && existingLatest.post_url === item.post_url) {
+    // Same post URL, just return the existing record
+    return existingLatest;
+  }
 
   const authorName = item?.author?.name || null;
   const authorLogoUrl = item?.author?.logo_url || null;
